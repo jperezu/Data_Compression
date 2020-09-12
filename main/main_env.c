@@ -30,13 +30,16 @@
 	#define CHIP_NAME "ESP32"
 #endif
 
+//Test evaluation variables
 #define INTEGER_DIG 2
 #define DECIMAL_DIG 2
 #define N_SAMPLES 20
 #define ITERATIONS 1000
+#define STATIC_SIZE 0
 
 char digits[] = { '0','1','2','3','4','5','6','7','8','9'};
 extern uint8_t stop;
+int sample_length = (INTEGER_DIG + DECIMAL_DIG + 1);
 /*
  * This example program compresses an input string, sending
  * the output to a file.  It then expands the output file,
@@ -45,14 +48,15 @@ extern uint8_t stop;
 void app_main(){
 
 	uint32_t  compressed_file = 0;
-	int stream_length = 0;
+	int stream_length;
 	int x = 0;
 	int i;
 	int j;
 
+	stream_length = (STATIC_SIZE) ? N_SAMPLES * sample_length : 0;
 
 	while(!stop && x < ITERATIONS){
-		stream_length += (INTEGER_DIG + DECIMAL_DIG + 1);
+		if  (!STATIC_SIZE)  stream_length += sample_length;
 		char input[stream_length];
 		//Generate an input of STREAM_LENGTH bits to feed the algorithm
 	j = 0;
@@ -63,7 +67,7 @@ void app_main(){
 	}
 	input[stream_length] = '\0';
 	printf("[%i samples in buffer]-----------------------------------------\n",
-			stream_length/(INTEGER_DIG + DECIMAL_DIG + 1));
+			stream_length/sample_length);
 	printf("%s\n", input);
 
 
@@ -72,23 +76,23 @@ void app_main(){
 	expand(&compressed_file, input);
 
 	//print_distribution();
-	if (stop) stream_length -= (INTEGER_DIG + DECIMAL_DIG + 1);
+	if (stop) stream_length -= sample_length;
 	vTaskDelay(10 / portTICK_PERIOD_MS);
 	x++;
 	}
 	float ratio_string = (float) stream_length/
 			      (float) sizeof(compressed_file);
 	float ratio_float = (float) sizeof(float)*stream_length/
-				      (float) (sizeof(compressed_file)*(INTEGER_DIG + DECIMAL_DIG + 1));
+				      (float) (sizeof(compressed_file)*sample_length);
 	printf("--String Scenario (%i samples [%i bytes] in %i bytes )--\n",
-			stream_length/(INTEGER_DIG + DECIMAL_DIG + 1),
+			stream_length/sample_length,
 			stream_length/sizeof(char),
 			sizeof(compressed_file));
 	printf("\tMax compression ratio: %.2f\n",ratio_string);
 	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_string);
 	printf("--Float Scenario (%i samples [%i bytes] in %i bytes)--\n",
-			stream_length/(INTEGER_DIG + DECIMAL_DIG + 1),
-			sizeof(float)*stream_length/(INTEGER_DIG + DECIMAL_DIG + 1),
+			stream_length/sample_length,
+			sizeof(float)*stream_length/sample_length,
 			sizeof(compressed_file));
 	printf("\tMax compression ratio: %.2f\n",ratio_float);
 	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
