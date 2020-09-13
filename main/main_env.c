@@ -41,6 +41,7 @@
 #define N_SAMPLES 20
 #define ITERATIONS 1000
 #define STATIC_SIZE 0
+#define CODING_TYPE 1 // 0 -> Arithmetic, 1 -> LZW
 
 char digits[] = { '0','1','2','3','4','5','6','7','8','9'};
 extern uint8_t stop;
@@ -57,16 +58,13 @@ void app_main(){
 
 	esp_err_t esp_timer_init(); //initialization of the timer -- call this function from stratup
 
-	uint32_t*  arith_compressed = (uint32_t*) malloc(sizeof(uint32_t));
-	uint32_t* lzw_compressed = (uint32_t*) malloc(sizeof(uint32_t));
 	int64_t time_1 = 0;
 	int64_t time_2 = 0;
 	int64_t time_3 = 0;
 	int64_t comp_time = 0;
 	int64_t decomp_time = 0;
-	uint32_t mem_1;
-	uint32_t mem_2;
-	uint32_t compressed;
+	uint32_t*  arith_compressed;
+	uint32_t* lzw_compressed;
 	int stream_length;
 	int x = 0;
 	int i;
@@ -77,6 +75,7 @@ void app_main(){
 	while(!stop && x < ITERATIONS){
 		if  (!STATIC_SIZE)  stream_length += sample_length;
 		char input[stream_length];
+
 		//Generate an input of STREAM_LENGTH bits to feed the algorithm
 	j = 0;
 	for (i=0;i<stream_length;i++){
@@ -89,32 +88,46 @@ void app_main(){
 			stream_length/sample_length);
 	printf("%s\n", input);
 
-
-//random input has been generated
-	mem_1 = heap_caps_get_free_size(MALLOC_CAP_8BIT);		//returns the number of free bytes in data memory
-
 /********************** ARITHMETIC CODING **********************/
+	if(!CODING_TYPE){
+	arith_compressed = malloc(sizeof(uint32_t));
 	time_1 = esp_timer_get_time();
-	compress(input, arith_compressed);		//running compression algorithm
+		compress(input, arith_compressed);		//running compression algorithm
 	time_2 = esp_timer_get_time();
-	mem_2 = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-	printf("-Compressed: %0X\n",*arith_compressed);
-	expand(arith_compressed, input);		//running decompression algorithm
+	printf("%0X\n", *arith_compressed);
+		expand(arith_compressed, input);		//running decompression algorithm
 	time_3 = esp_timer_get_time();
 	//print_distribution();
 	if (stop) stream_length -= sample_length;
+	if(esp_get_free_heap_size() < stream_length) stop = 1;
+	}
 /**************************************************************/
 
 /***************************** LZW ****************************/
-	printf("Encode:\n");
-	LZWEncode(input, lzw_compressed);
-	int i = 0;
-	while(lzw_compressed[i] != (int)NULL){
-		printf("%0X", lzw_compressed[i]);
-		i++;
-	}
-	printf("\nDecode:\n");
-	LZWDecode(lzw_compressed, input);
+	if(CODING_TYPE){
+		lzw_compressed = malloc((stream_length+1)*sizeof(uint32_t));
+		time_1 = esp_timer_get_time();
+		printf("Encode:\n");
+			LZWEncode(input, lzw_compressed);		//running compression algorithm
+		time_2 = esp_timer_get_time();
+		i = 0;
+//BUGGED?? //////////////////////////////////////////
+		while(lzw_compressed[i] != NULL){
+				printf("%i", lzw_compressed[i]);
+				i++;
+			}
+//////////////////////////////////////////////////
+		printf("\n");
+		printf("\nDecode:\n");
+			LZWDecode(lzw_compressed, input);		//running decompression algorithm
+		printf("\n");
+		time_3 = esp_timer_get_time();
+
+		printf("FREE HEAP: %i\n",esp_get_free_heap_size());
+		if ( esp_get_free_heap_size() < stream_length) stop = 1;
+		//if (stop) stream_length -= sample_length;
+		}
+
 /**************************************************************/
 	vTaskDelay(10 / portTICK_PERIOD_MS);
 	x++;
@@ -123,22 +136,26 @@ void app_main(){
 	comp_time = time_2 - time_1;		//get compression time
 	decomp_time = time_3 - time_1;		//get decompression time
 	//compressed = mem_1
-	float ratio_string = (float) stream_length/
-			      (float) sizeof(arith_compressed);
-	float ratio_float = (float) sizeof(float)*stream_length/
-				      (float) (sizeof(arith_compressed)*sample_length);
-	printf("--String Scenario (%i samples [%i bytes] in %i bytes )--\n",
-			stream_length/sample_length,
-			stream_length/sizeof(char),
-			sizeof(arith_compressed));
-	printf("\tMax compression ratio: %.2f\n",ratio_string);
-	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_string);
-	printf("--Float Scenario (%i samples [%i bytes] in %i bytes)--\n",
-			stream_length/sample_length,
-			sizeof(float)*stream_length/sample_length,
-			sizeof(arith_compressed));
-	printf("\tMax compression ratio: %.2f\n",ratio_float);
-	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
-	printf("\tCompressing time: %lld\n", comp_time);
-	printf("\tCompressing time: %lld\n", decomp_time);
+
+	if(!CODING_TYPE){
+		//REWORK!! PART OF THE CODE REMOVED BY ENRIC'S COMMIT
+		float ratio_string = (float) stream_length/
+					  (float) sizeof(arith_compressed);
+		float ratio_float = (float) sizeof(float)*stream_length/
+						  (float) (sizeof(arith_compressed)*sample_length);
+		printf("--String Scenario (%i samples [%i bytes] in %i bytes )--\n",
+				stream_length/sample_length,
+				stream_length/sizeof(char),
+				sizeof(arith_compressed));
+		printf("\tMax compression ratio: %.2f\n",ratio_string);
+		printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_string);
+		printf("--Float Scenario (%i samples [%i bytes] in %i bytes)--\n",
+				stream_length/sample_length,
+				sizeof(float)*stream_length/sample_length,
+				sizeof(arith_compressed));
+		printf("\tMax compression ratio: %.2f\n",ratio_float);
+		printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
+	}
+	printf("Compressing time: %lld\n", comp_time);
+	printf("Decoding time: %lld\n", decomp_time);
 }

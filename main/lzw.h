@@ -43,7 +43,7 @@
 *                                CONSTANTS
 ***************************************************************************/
 #define MIN_CODE_LEN    9                   /* min # bits in a code word */
-#define MAX_CODE_LEN    20                  /* max # bits in a code word */
+#define MAX_CODE_LEN    9                  /* max # bits in a code word */
 
 #define FIRST_CODE      (1 << CHAR_BIT)     /* value of 1st string code */
 #define MAX_CODES       (1 << MAX_CODE_LEN)

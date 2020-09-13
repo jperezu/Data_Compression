@@ -166,29 +166,3 @@ short int input_bit( uint32_t *stream )
     input_bits_left--;
     return ( ( *current_byte >> input_bits_left ) & 1 );
 }
-
-/*
- * When monitoring compression ratios, we need to know how many
- * bytes have been output so far.  This routine takes care of telling
- * how many bytes have been output, including pending bytes that
- * haven't actually been written out.
- */
-long bit_ftell_output( uint32_t *stream )
-{
-    long total;
-
-    total = ftell( stream );
-    total += current_byte - buffer;
-    total += underflow_bits/8;
-    return( total );
-}
-
-/*
- * When monitoring compression ratios, we need to know how many bits
- * have been read in so far.  This routine tells how many bytes have
- * been read in, excluding bytes that are pending in the buffer.
- */
-long bit_ftell_input( uint32_t *stream )
-{
-    return( ftell( stream ) - input_bytes_left + 1 );
-}

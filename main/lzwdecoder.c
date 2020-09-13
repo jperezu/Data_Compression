@@ -64,9 +64,10 @@ static decode_dictionary_t dictionary[(MAX_CODES - FIRST_CODE)];
 /***************************************************************************
 *                               PROTOTYPES
 ***************************************************************************/
-static unsigned char DecodeRecursive(unsigned int code, char *fpOut);
+static unsigned char DecodeRecursive(unsigned int code, char **fpOut);
+int checkErrors(char in, char out);
 
-
+extern uint8_t stop;
 /***************************************************************************
 *                                FUNCTIONS
 ***************************************************************************/
@@ -109,6 +110,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
     lastCode = *fpIn++;
     c = lastCode;
     //fputc(lastCode, fpOut);
+    if (checkErrors(lastCode,*fpOut++) == -1) return -1;
     putc((char)lastCode, stdout);
     /* decode rest of file */
     while ((int)(code = *fpIn++) != (int)NULL)
@@ -125,7 +127,8 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
         if (code < nextCode)
         {
             /* we have a known code.  decode it */
-            c = DecodeRecursive(code, fpOut);
+            c = DecodeRecursive(code, &fpOut);
+            if (stop) return -1;
         }
         else
         {
@@ -138,8 +141,10 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
             unsigned char tmp;
 
             tmp = c;
-            c = DecodeRecursive(lastCode, fpOut);
+            c = DecodeRecursive(lastCode, &fpOut);
+            if (stop) return -1;
             //fputc(tmp, fpOut);
+            if (checkErrors(tmp,*fpOut++) == -1) return -1;
             putc((char)tmp, stdout);
         }
 
@@ -172,7 +177,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
 *   Effects    : Decoded code word is written to a file
 *   Returned   : The first character in the decoded string
 ***************************************************************************/
-static unsigned char DecodeRecursive(unsigned int code, char *fpOut)
+static unsigned char DecodeRecursive(unsigned int code, char **fpOut)
 {
     unsigned char c;
     unsigned char firstChar;
@@ -184,7 +189,9 @@ static unsigned char DecodeRecursive(unsigned int code, char *fpOut)
         code = dictionary[code - FIRST_CODE].prefixCode;
 
         /* evaluate new code word for remaining string */
+
         firstChar = DecodeRecursive(code, fpOut);
+        if (stop) return -1;
     }
     else
     {
@@ -194,7 +201,17 @@ static unsigned char DecodeRecursive(unsigned int code, char *fpOut)
     }
 
     //fputc(c, fpOut);
+    if (checkErrors(c,**fpOut) == -1) return -1;
+    *fpOut = (*fpOut) + 1;
     putc((char)c, stdout);
     return firstChar;
 }
 
+int checkErrors(char in, char out){
+	if (in != out){
+		printf("-> DATA CORRUPTED\n Expected [%c] but decoded [%c]", in, out);
+		stop = 1;
+		return -1;
+	}
+	return 0;
+}

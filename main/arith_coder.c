@@ -319,7 +319,7 @@ void expand(uint32_t* compressed_file, char* input)
         if(c == input[i])
 			putc( c, stdout );
 		else{
-			error_exit(" [DATA CORRUPTED]");
+			error_exit("-> DATA CORRUPTED");
         	printf("Expected [%c] but [%c] decoded\n", input[i], c);
         	return;
 		}
