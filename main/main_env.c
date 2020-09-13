@@ -57,13 +57,13 @@ void app_main(){
 
 	esp_err_t esp_timer_init(); //initialization of the timer -- call this function from stratup
 
+	uint32_t*  arith_compressed = (uint32_t*) malloc(sizeof(uint32_t));
+	uint32_t* lzw_compressed = (uint32_t*) malloc(sizeof(uint32_t));
 	int64_t time_1 = 0;
 	int64_t time_2 = 0;
 	int64_t time_3 = 0;
 	int64_t comp_time = 0;
 	int64_t decomp_time = 0;
-	uint32_t  arith_compressed = 0;
-	uint32_t lzw_compressed = 0;
 	uint32_t mem_1;
 	uint32_t mem_2;
 	uint32_t compressed;
@@ -95,11 +95,11 @@ void app_main(){
 
 /********************** ARITHMETIC CODING **********************/
 	time_1 = esp_timer_get_time();
-	compress(input, &arith_compressed);		//running compression algorithm
+	compress(input, arith_compressed);		//running compression algorithm
 	time_2 = esp_timer_get_time();
 	mem_2 = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-	printf("-Compressed: %0X\n",arith_compressed);
-	expand(&arith_compressed, input);		//running decompression algorithm
+	printf("-Compressed: %0X\n",*arith_compressed);
+	expand(arith_compressed, input);		//running decompression algorithm
 	time_3 = esp_timer_get_time();
 	//print_distribution();
 	if (stop) stream_length -= sample_length;
@@ -110,7 +110,7 @@ void app_main(){
 	LZWEncode(input, lzw_compressed);
 	int i = 0;
 	while(lzw_compressed[i] != (int)NULL){
-		printf("0X", lzw_compressed[i]);
+		printf("%0X", lzw_compressed[i]);
 		i++;
 	}
 	printf("\nDecode:\n");
