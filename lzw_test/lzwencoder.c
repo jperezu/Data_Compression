@@ -227,7 +227,7 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
 
     /* no more input.  write out last of the code. */
     *fpOut++ = code;
-    *fpOut = (int) '\0';
+    *fpOut = (int)NULL;
     /* we've encoded everything, free bitfile structure */
     //BitFileToFILE(bfpOut);
 

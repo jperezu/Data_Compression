@@ -111,7 +111,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
     //fputc(lastCode, fpOut);
     putc((char)lastCode, stdout);
     /* decode rest of file */
-    while ((int)(code = *fpIn++) != '\0')
+    while ((int)(code = *fpIn++) != (int)NULL)
     {
 
         /* look for code length increase marker */

@@ -60,17 +60,20 @@
 ****************************************************************************/
 int main(){
 
-    char *fpIn = "123\0";   /* pointer to open input file */
+    char *fpIn = "123.123.123.123.123";   /* pointer to open input file */
     //49 50 51 256 258 257 259 262 257
     uint32_t *fpOut = (uint32_t*) malloc(sizeof(uint32_t));    /* pointer to open output file */
 
 
+    printf("Encode:\n");
 	LZWEncode(fpIn, fpOut);
-	while(*fpOut != (int)'\0')printf("%i ", *fpOut++);
-	//LZWDecode(fpOut, fpIn);
+	int i = 0;
+	while(fpOut[i] != (int)NULL){
+		printf("%i ", fpOut[i]);
+		i++;
+	}
+	printf("\nDecode:\n");
+	LZWDecode(fpOut, fpIn);
 
-
-    //free(fpIn);
-    free(fpOut);
     return 0;
 }
