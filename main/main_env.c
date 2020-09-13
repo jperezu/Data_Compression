@@ -19,7 +19,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "arith_coder.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdkconfig.h"
@@ -27,6 +26,10 @@
 #include "esp_spi_flash.h"
 #include "esp_timer.h"
 #include "esp_heap_caps.h"
+
+
+#include "arith_coder.h"
+#include "lzw.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32
 	#define CHIP_NAME "ESP32"
@@ -59,7 +62,8 @@ void app_main(){
 	int64_t time_3 = 0;
 	int64_t comp_time = 0;
 	int64_t decomp_time = 0;
-	uint32_t  compressed_file = 0;
+	uint32_t  arith_compressed = 0;
+	uint32_t lzw_compressed = 0;
 	uint32_t mem_1;
 	uint32_t mem_2;
 	uint32_t compressed;
@@ -89,17 +93,29 @@ void app_main(){
 //random input has been generated
 	mem_1 = heap_caps_get_free_size(MALLOC_CAP_8BIT);		//returns the number of free bytes in data memory
 
-
+/********************** ARITHMETIC CODING **********************/
 	time_1 = esp_timer_get_time();
-	compress(input, &compressed_file);		//running compression algorithm
+	compress(input, &arith_compressed);		//running compression algorithm
 	time_2 = esp_timer_get_time();
 	mem_2 = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-	printf("-Compressed: %0X\n",compressed_file);
-	expand(&compressed_file, input);		//running decompression algorithm
+	printf("-Compressed: %0X\n",arith_compressed);
+	expand(&arith_compressed, input);		//running decompression algorithm
 	time_3 = esp_timer_get_time();
-
 	//print_distribution();
 	if (stop) stream_length -= sample_length;
+/**************************************************************/
+
+/***************************** LZW ****************************/
+	printf("Encode:\n");
+	LZWEncode(input, lzw_compressed);
+	int i = 0;
+	while(lzw_compressed[i] != (int)NULL){
+		printf("0X", lzw_compressed[i]);
+		i++;
+	}
+	printf("\nDecode:\n");
+	LZWDecode(lzw_compressed, input);
+/**************************************************************/
 	vTaskDelay(10 / portTICK_PERIOD_MS);
 	x++;
 	}
@@ -108,19 +124,19 @@ void app_main(){
 	decomp_time = time_3 - time_1;		//get decompression time
 	//compressed = mem_1
 	float ratio_string = (float) stream_length/
-			      (float) sizeof(compressed_file);
+			      (float) sizeof(arith_compressed);
 	float ratio_float = (float) sizeof(float)*stream_length/
-				      (float) (sizeof(compressed_file)*sample_length);
+				      (float) (sizeof(arith_compressed)*sample_length);
 	printf("--String Scenario (%i samples [%i bytes] in %i bytes )--\n",
 			stream_length/sample_length,
 			stream_length/sizeof(char),
-			sizeof(compressed_file));
+			sizeof(arith_compressed));
 	printf("\tMax compression ratio: %.2f\n",ratio_string);
 	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_string);
 	printf("--Float Scenario (%i samples [%i bytes] in %i bytes)--\n",
 			stream_length/sample_length,
 			sizeof(float)*stream_length/sample_length,
-			sizeof(compressed_file));
+			sizeof(arith_compressed));
 	printf("\tMax compression ratio: %.2f\n",ratio_float);
 	printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
 	printf("\tCompressing time: %lld\n", comp_time);
