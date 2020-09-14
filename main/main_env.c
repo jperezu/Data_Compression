@@ -41,7 +41,8 @@
 #define N_SAMPLES 20
 #define ITERATIONS 1000
 #define STATIC_SIZE 0
-#define CODING_TYPE 1 // 0 -> Arithmetic, 1 -> LZW
+#define CODING_TYPE 0 // 0 -> Arithmetic, 1 -> LZW
+#define DEBUG 0 //1 -> Most of printf doesn't work
 
 char digits[] = { '0','1','2','3','4','5','6','7','8','9'};
 extern uint8_t stop;
@@ -84,9 +85,11 @@ void app_main(){
 		else j++;
 	}
 	input[stream_length] = '\0';		//end of file
-	//printf("[%i samples in buffer]-----------------------------------------\n",
-	//		stream_length/sample_length);
-	//printf("%s\n", input);
+	if (DEBUG){
+	printf("[%i samples in buffer]-----------------------------------------\n",
+			stream_length/sample_length);
+	printf("%s\n", input);
+	}
 
 /********************** ARITHMETIC CODING **********************/
 	if(!CODING_TYPE){
@@ -94,16 +97,25 @@ void app_main(){
 	time_1 = esp_timer_get_time();
 		compress(input, arith_compressed);		//running compression algorithm
 	time_2 = esp_timer_get_time();
-	//printf("%0X\n", *arith_compressed);
+
+	if (DEBUG){
+	printf("%0X\n", *arith_compressed);
+	}
 		expand(arith_compressed, input);		//running decompression algorithm
 	time_3 = esp_timer_get_time();
-	//print_distribution();
+
+	if (DEBUG){
+	print_distribution();
+	}
 
 
 	comp_time = time_2 - time_1;		//get compression time
 	decomp_time = time_3 - time_1;		//get decompression time
+
+	if (DEBUG){
 	printf("Encoding time: %lld\n", comp_time);
 	//printf("Decoding time: %lld\n", decomp_time);
+	}
 
 	if (stop) stream_length -= sample_length;
 	if(esp_get_free_heap_size() < stream_length) stop = 1;
@@ -114,29 +126,47 @@ void app_main(){
 	if(CODING_TYPE){
 		lzw_compressed = malloc((stream_length+1)*sizeof(uint32_t));
 		time_1 = esp_timer_get_time();
-		//printf("Encode:\n");
+
+		if (DEBUG){
+		printf("Encode:\n");
+		}
 			LZWEncode(input, lzw_compressed);		//running compression algorithm
 		time_2 = esp_timer_get_time();
 		i = 0;
 //BUGGED?? //////////////////////////////////////////
 		while(lzw_compressed[i] != NULL){
-				//printf("%i", lzw_compressed[i]);
+
+			if (DEBUG){
+				printf("%i", lzw_compressed[i]);
+			}
 				i++;
 			}
 //////////////////////////////////////////////////
-		//printf("\n");
-		//printf("\nDecode:\n");
+
+		if (DEBUG){
+		printf("\n");
+		printf("\nDecode:\n");
+		}
+
 			LZWDecode(lzw_compressed, input);		//running decompression algorithm
-		//printf("\n");
+
+		if (DEBUG){
+		printf("\n");
+		}
 		time_3 = esp_timer_get_time();
 
-		//printf("FREE HEAP: %i\n",esp_get_free_heap_size());
-
+		if (DEBUG){
+		printf("FREE HEAP: %i\n",esp_get_free_heap_size());
+		}
 
 		comp_time = time_2 - time_1;		//get compression time
 		decomp_time = time_3 - time_1;		//get decompression time
+
+		if (DEBUG){
 		printf("Encoding time: %lld\n", comp_time);
 		//printf("Decoding time: %lld\n", decomp_time);
+		}
+
 		if ( esp_get_free_heap_size() < stream_length) stop = 1;
 		//if (stop) stream_length -= sample_length;
 		}
@@ -149,6 +179,7 @@ void app_main(){
 
 	//compressed = mem_1
 
+	if (DEBUG){
 	if(!CODING_TYPE){
 		//REWORK!! PART OF THE CODE REMOVED BY ENRIC'S COMMIT
 		float ratio_string = (float) stream_length/
@@ -167,6 +198,7 @@ void app_main(){
 				sizeof(arith_compressed));
 		printf("\tMax compression ratio: %.2f\n",ratio_float);
 		printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
+	}
 	}
 
 }
