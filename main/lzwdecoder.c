@@ -111,7 +111,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
     c = lastCode;
     //fputc(lastCode, fpOut);
     if (checkErrors(lastCode,*fpOut++) == -1) return -1;
-    putc((char)lastCode, stdout);
+    //putc((char)lastCode, stdout);
     /* decode rest of file */
     while ((int)(code = *fpIn++) != (int)NULL)
     {
@@ -145,7 +145,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
             if (stop) return -1;
             //fputc(tmp, fpOut);
             if (checkErrors(tmp,*fpOut++) == -1) return -1;
-            putc((char)tmp, stdout);
+            //putc((char)tmp, stdout);
         }
 
         /* if room, add new code to the dictionary */
@@ -203,7 +203,7 @@ static unsigned char DecodeRecursive(unsigned int code, char **fpOut)
     //fputc(c, fpOut);
     if (checkErrors(c,**fpOut) == -1) return -1;
     *fpOut = (*fpOut) + 1;
-    putc((char)c, stdout);
+    //putc((char)c, stdout);
     return firstChar;
 }
 
