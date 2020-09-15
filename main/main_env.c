@@ -39,7 +39,7 @@
 #define INTEGER_DIG 2
 #define DECIMAL_DIG 2
 #define N_SAMPLES 20
-#define ITERATIONS 1000
+#define ITERATIONS 10
 #define STATIC_SIZE 0
 #define CODING_TYPE 1 // 0 -> Arithmetic, 1 -> LZW
 
@@ -58,13 +58,16 @@ void app_main(){
 
 	esp_err_t esp_timer_init(); //initialization of the timer -- call this function from stratup
 
-	int64_t time_1 = 0;
-	int64_t time_2 = 0;
-	int64_t time_3 = 0;
-	int64_t comp_time = 0;
-	int64_t decomp_time = 0;
+	int32_t time_1 = 0;
+	int32_t time_2 = 0;
+	int32_t time_3 = 0;
+	int32_t time_4 = 0;
+	uint32_t mem_1;
+	uint32_t mem_2;
+	uint32_t comp_time;
+	int32_t decomp_time;
 	uint32_t*  arith_compressed;
-	uint32_t* lzw_compressed;
+	uint16_t* lzw_compressed;
 	int stream_length;
 	int x = 0;
 	int i;
@@ -90,13 +93,17 @@ void app_main(){
 
 /********************** ARITHMETIC CODING **********************/
 	if(!CODING_TYPE){
+	mem_1 = esp_get_free_heap_size();
 	arith_compressed = malloc(sizeof(uint32_t));
 	time_1 = esp_timer_get_time();
 		compress(input, arith_compressed);		//running compression algorithm
 	time_2 = esp_timer_get_time();
+	mem_2 = esp_get_free_heap_size();
 	printf("%0X\n", *arith_compressed);
-		expand(arith_compressed, input);		//running decompression algorithm
+	printf("-Stream size: %i, compressed size: %u [bytes]\n",stream_length, mem_1 - mem_2);
 	time_3 = esp_timer_get_time();
+		expand(arith_compressed, input);		//running decompression algorithm
+	time_4 = esp_timer_get_time();
 	//print_distribution();
 	if (stop) stream_length -= sample_length;
 	if(esp_get_free_heap_size() < stream_length) stop = 1;
@@ -105,23 +112,27 @@ void app_main(){
 
 /***************************** LZW ****************************/
 	if(CODING_TYPE){
-		lzw_compressed = malloc((stream_length+1)*sizeof(uint32_t));
-		time_1 = esp_timer_get_time();
 		printf("Encode:\n");
+		mem_1 = esp_get_free_heap_size();
+		lzw_compressed = malloc((stream_length+1)*sizeof(uint16_t));
+		time_1 = esp_timer_get_time();
 			LZWEncode(input, lzw_compressed);		//running compression algorithm
 		time_2 = esp_timer_get_time();
+		mem_2 = esp_get_free_heap_size();
 		i = 0;
-//BUGGED?? //////////////////////////////////////////
+
 		while(lzw_compressed[i] != NULL){
 				printf("%i", lzw_compressed[i]);
 				i++;
 			}
-//////////////////////////////////////////////////
 		printf("\n");
+		printf("-Stream size: %i, compressed size: %u [bytes]\n",stream_length, mem_1 - mem_2);
+
 		printf("\nDecode:\n");
-			LZWDecode(lzw_compressed, input);		//running decompression algorithm
-		printf("\n");
 		time_3 = esp_timer_get_time();
+			LZWDecode(lzw_compressed, input);		//running decompression algorithm
+		time_4 = esp_timer_get_time();
+		printf("\n");
 
 		printf("FREE HEAP: %i\n",esp_get_free_heap_size());
 		if ( esp_get_free_heap_size() < stream_length) stop = 1;
@@ -134,7 +145,7 @@ void app_main(){
 	}
 
 	comp_time = time_2 - time_1;		//get compression time
-	decomp_time = time_3 - time_1;		//get decompression time
+	decomp_time = time_4 - time_3;		//get decompression time
 	//compressed = mem_1
 
 	if(!CODING_TYPE){
@@ -156,6 +167,6 @@ void app_main(){
 		printf("\tMax compression ratio: %.2f\n",ratio_float);
 		printf("\tMax data rate savings: %.2f%%\n", 100 - 100/ratio_float);
 	}
-	printf("Compressing time: %lld\n", comp_time);
-	printf("Decoding time: %lld\n", decomp_time);
+	printf("Compressing time: %i\n", comp_time);
+	printf("Decoding time: %i\n", decomp_time);
 }

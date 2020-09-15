@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "bitio.h"
+#define DEBUG 0
 
 /*
  * These four variables define the current state of the arithmetic
@@ -273,7 +274,9 @@ void compress(char* input, uint32_t* compressed_file)
     char c;
     SYMBOL s;
 
+    if (DEBUG){
     puts( "Compressing..." );
+    }
     initialize_output_bitstream();
     initialize_arithmetic_encoder();
     for ( i=0 ; ; )
@@ -304,7 +307,10 @@ void expand(uint32_t* compressed_file, char* input)
     char c;
     unsigned int count;
     unsigned int i = 0;
+
+    if (DEBUG){
     puts( "Decoding..." );
+    }
 
     initialize_input_bitstream();
     initialize_arithmetic_decoder( compressed_file );
@@ -316,8 +322,9 @@ void expand(uint32_t* compressed_file, char* input)
         if ( c == '\0' )
             break;
         remove_symbol_from_stream( compressed_file, &s );
-        if(c == input[i])
-			putc( c, stdout );
+        if(c == input[i]){
+			//putc( c, stdout );
+        }
 		else{
 			error_exit("-> DATA CORRUPTED");
         	printf("Expected [%c] but [%c] decoded\n", input[i], c);
