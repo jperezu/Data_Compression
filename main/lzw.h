@@ -42,17 +42,23 @@
 /***************************************************************************
 *                                CONSTANTS
 ***************************************************************************/
-#define MIN_CODE_LEN    9                   /* min # bits in a code word */
-#define MAX_CODE_LEN    9                  /* max # bits in a code word */
+#define MIN_CODE_LEN   	8                   /* min # bits in a coded word */
+#define MAX_CODE_LEN    256                /* max # bits in a code word */
+#define MIN_DECODE_LEN  9                   /* min # bits in a decode word */
+#define MAX_DECODE_LEN  14                  /* max # bits in a code word */
 
-#define FIRST_CODE      (1 << CHAR_BIT)     /* value of 1st string code */
+#define INIT_CODE		11
+#define FIRST_CODE      256     /* value of 1st string code */
 #define MAX_CODES       (1 << MAX_CODE_LEN)
+#define MAX_DECODES       (1 << MAX_DECODE_LEN)
 
-#if (MIN_CODE_LEN <= CHAR_BIT)
+#define DEBUG		0
+
+#if (MIN_DECODE_LEN <= CHAR_BIT)
 #error Code words must be larger than 1 character
 #endif
 
-#if ((MAX_CODES - 1) > INT_MAX)
+#if ((MAX_DECODES - 1) > INT_MAX)
 #error There cannot be more codes than can fit in an integer
 #endif
 
@@ -60,14 +66,15 @@
 *                                  MACROS
 ***************************************************************************/
 #define CURRENT_MAX_CODES(bits)     ((unsigned int)(1 << (bits)))
-
+#define CURRENT_MAX_DECODES(bits)     ((unsigned int)(1 << (bits)))
 /***************************************************************************
 *                               PROTOTYPES
 ***************************************************************************/
  /* encode inFile */
-int LZWEncode(char* fpIn, uint32_t* fpOut);
+int LZWEncode(char* fpIn, int8_t* fpOut);
 
 /* decode inFile*/
-int LZWDecode(uint32_t* fpIn, char *fpOut);
+int LZWDecode(int8_t* fpIn, char *fpOut);
+
 
 #endif  /* ndef _LZW_H_ */

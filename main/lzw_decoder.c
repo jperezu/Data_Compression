@@ -59,12 +59,12 @@ typedef struct
 ***************************************************************************/
 
 /* dictionary of string the code word is the dictionary index */
-static decode_dictionary_t dictionary[(MAX_CODES - FIRST_CODE)];
+static decode_dictionary_t dictionary[(MAX_DECODES - FIRST_CODE)];
 
 /***************************************************************************
 *                               PROTOTYPES
 ***************************************************************************/
-static unsigned char DecodeRecursive(unsigned int code, char **fpOut);
+static unsigned char DecodeRecursive(int code, char **fpOut);
 int checkErrors(char in, char out);
 
 extern uint8_t stop;
@@ -84,12 +84,12 @@ extern uint8_t stop;
 *   Returned   : 0 for success, -1 for failure.  errno will be set in the
 *                event of a failure.
 ***************************************************************************/
-int LZWDecode(uint32_t* fpIn, char *fpOut)
+int LZWDecode(int8_t* fpIn, char *fpOut)
 {
 
-    unsigned int nextCode;              /* value of next code */
-    unsigned int lastCode;              /* last decoded code word */
-    unsigned int code;                  /* code word to decode */
+	unsigned int nextCode;              /* value of next code */
+	unsigned int lastCode;              /* last decoded code word */
+	unsigned int code;                  /* code word to decode */
     unsigned char currentCodeLen;       /* length of code words now */
     unsigned char c;                    /* last decoded character */
 
@@ -101,34 +101,43 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
     }
 
     /* start MIN_CODE_LEN bit code words */
-    currentCodeLen = MIN_CODE_LEN;
+    currentCodeLen = MIN_DECODE_LEN;
 
     /* initialize for decoding */
     nextCode = FIRST_CODE;  /* code for next (first) string */
 
     /* first code from file must be a character.  use it for initial values */
-    lastCode = *fpIn++;
+    lastCode = *fpIn++ + '0';
     c = lastCode;
     //fputc(lastCode, fpOut);
     if (checkErrors(lastCode,*fpOut++) == -1) return -1;
-    //putc((char)lastCode, stdout);
     /* decode rest of file */
-    while ((int)(code = *fpIn++) != (int)NULL)
+    while (*fpIn != -1)
     {
+    	code = *fpIn++;
+    	if (code < 10)
+    		code += '0';
+    	else if (code == 10)
+    		code = '.';
+    	else code += FIRST_CODE - INIT_CODE;
 
         /* look for code length increase marker */
-        while (((CURRENT_MAX_CODES(currentCodeLen) - 1) == code) &&
-            (currentCodeLen < MAX_CODE_LEN))
+        while (((CURRENT_MAX_DECODES(currentCodeLen) - 1) == code) &&
+            (currentCodeLen < MAX_DECODE_LEN))
         {
             currentCodeLen++;
             code = *fpIn++;
         }
 
-        if (code < nextCode)
+        if ((code < nextCode) && (code > 57))
         {
             /* we have a known code.  decode it */
             c = DecodeRecursive(code, &fpOut);
             if (stop) return -1;
+        }
+        else if (code <= 57 && code >= 46){
+        	c = code;
+        	if (checkErrors(c,*fpOut++) == -1) return -1;
         }
         else
         {
@@ -145,11 +154,10 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
             if (stop) return -1;
             //fputc(tmp, fpOut);
             if (checkErrors(tmp,*fpOut++) == -1) return -1;
-            //putc((char)tmp, stdout);
         }
 
         /* if room, add new code to the dictionary */
-        if (nextCode < MAX_CODES)
+        if (nextCode < MAX_DECODES)
         {
             dictionary[nextCode - FIRST_CODE].prefixCode = lastCode;
             dictionary[nextCode - FIRST_CODE].suffixChar = c;
@@ -160,6 +168,7 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
         lastCode = code;
     }
 
+    if (DEBUG) putc('\n', stdout);
     /* we've decoded everything, free bitfile structure */
     //BitFileToFILE(bfpIn);
 
@@ -177,12 +186,12 @@ int LZWDecode(uint32_t* fpIn, char *fpOut)
 *   Effects    : Decoded code word is written to a file
 *   Returned   : The first character in the decoded string
 ***************************************************************************/
-static unsigned char DecodeRecursive(unsigned int code, char **fpOut)
+static unsigned char DecodeRecursive(int code, char **fpOut)
 {
     unsigned char c;
     unsigned char firstChar;
 
-    if (code >= FIRST_CODE)
+    if (code > 57)
     {
         /* code word is string + c */
         c = dictionary[code - FIRST_CODE].suffixChar;
@@ -203,15 +212,15 @@ static unsigned char DecodeRecursive(unsigned int code, char **fpOut)
     //fputc(c, fpOut);
     if (checkErrors(c,**fpOut) == -1) return -1;
     *fpOut = (*fpOut) + 1;
-    //putc((char)c, stdout);
     return firstChar;
 }
 
 int checkErrors(char in, char out){
 	if (in != out){
-		printf("-> DATA CORRUPTED\n Expected [%c] but decoded [%c]", in, out);
+		printf("-> DATA CORRUPTED\n Expected [%c] but decoded [%c]\n", out, in);
 		stop = 1;
 		return -1;
 	}
+    if (DEBUG) putc((char)in, stdout);
 	return 0;
 }

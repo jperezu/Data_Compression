@@ -44,9 +44,9 @@
 /* node in dictionary tree */
 typedef struct dict_node_t
 {
-    unsigned int codeWord;      /* code word for this entry */
+	uint64_t codeWord;      /* code word for this entry */
     unsigned char suffixChar;   /* last char in encoded string */
-    unsigned int prefixCode;    /* code for remaining chars in string */
+    uint64_t prefixCode;    /* code for remaining chars in string */
 
     /* pointer to child nodes */
     struct dict_node_t *left;   /* child with < key */
@@ -70,16 +70,16 @@ typedef struct dict_node_t
 ***************************************************************************/
 
 /* dictionary tree node create/free */
-static dict_node_t *MakeNode(const unsigned int codeWord,
-    const unsigned int prefixCode, const unsigned char suffixChar);
+static dict_node_t *MakeNode(const uint64_t codeWord,
+    const uint64_t prefixCode, const unsigned char suffixChar);
 static void FreeTree(dict_node_t *node);
 
 /* searches tree for matching dictionary entry */
 static dict_node_t *FindDictionaryEntry(dict_node_t *root,
-    const int unsigned prefixCode, const unsigned char c);
+    const uint64_t prefixCode, const unsigned char c);
 
 /* makes key from prefix code and character */
-static unsigned int MakeKey(const unsigned int prefixCode,
+static uint64_t MakeKey(const uint64_t prefixCode,
     const unsigned char suffixChar);
 
 /* write encoded data */
@@ -100,12 +100,12 @@ static unsigned int MakeKey(const unsigned int prefixCode,
 *   Returned   : 0 for success, -1 for failure.  errno will be set in the
 *                event of a failure.
 ***************************************************************************/
-int LZWEncode(char* fpIn, uint32_t* fpOut)
+int LZWEncode(char* fpIn, int8_t* fpOut)
 {
-    unsigned int code;                  /* code for current string */
+	uint64_t code;                  /* code for current string */
     unsigned char currentCodeLen;       /* length of the current code */
-    unsigned int nextCode;              /* next available code index */
-    int c;                              /* character to add to string */
+    uint64_t nextCode;              /* next available code index */
+    uint64_t c;                              /* character to add to string */
 
     dict_node_t *dictRoot;              /* root of dictionary tree */
     dict_node_t *node;                  /* node of dictionary tree */
@@ -125,7 +125,7 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
     /* start MIN_CODE_LEN bit code words */
     currentCodeLen = MIN_CODE_LEN;
 
-    nextCode = FIRST_CODE;  /* code for next (first) string */
+    nextCode = INIT_CODE;  /* code for next (first) string */
 
     /* now start the actual encoding process */
 
@@ -137,12 +137,14 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
     }
     else
     {
-        code = c;       /* start with code string = first character */
+        code = c - '0';       /* start with code string = first character */
     }
 
     /* create a tree root from 1st 2 character string */
     if ((c = *fpIn++) != '\0')
     {
+    	if (c != '.') c = c - '0';
+    	else c = 10;
         /* special case for NULL root */
         dictRoot = MakeNode(nextCode, code, c);
 
@@ -164,6 +166,8 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
     /* now encode normally */
     while ((c = *fpIn++) != '\0')
     {
+    	if (c != '.') c = c - '0';
+    	else c = 10;
         /* look for code + c in the dictionary */
         node = FindDictionaryEntry(dictRoot, code, c);
 
@@ -176,9 +180,10 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
         else
         {
             /* code + c is not in the dictionary, add it if there's room */
-            if (nextCode < MAX_CODES)
+            if (nextCode <= MAX_CODE_LEN)
             {
                 dict_node_t *tmp;
+
 
                 tmp = MakeNode(nextCode, code, c);
 
@@ -190,8 +195,8 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
                     return -1;
                 }
 
-                nextCode++;
-
+                if(nextCode != 9) nextCode++;
+                else nextCode+=2;
                 if (MakeKey(code, c) <
                     MakeKey(node->prefixCode, node->suffixChar))
                 {
@@ -204,19 +209,22 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
             }
             else
             {
+            	printf("%lli/%i\n",nextCode, MAX_CODE_LEN);
                 fprintf(stderr, "Error: Dictionary Full\n");
+                free(dictRoot);
+                return -1;
             }
 
             /* are we using enough bits to write out this code word? */
-            while ((code >= (CURRENT_MAX_CODES(currentCodeLen) - 1)) &&
-                (currentCodeLen < MAX_CODE_LEN))
-            {
-                /* mark need for bigger code word with all ones */
-//                PutCodeWord(bfpOut, (CURRENT_MAX_CODES(currentCodeLen) - 1),
-//                    currentCodeLen);
-
-                currentCodeLen++;
-            }
+//            while ((code >= (CURRENT_MAX_CODES(currentCodeLen) - 1)) &&
+//                (currentCodeLen < MAX_CODE_LEN))
+//            {
+//                /* mark need for bigger code word with all ones */
+////                PutCodeWord(bfpOut, (CURRENT_MAX_CODES(currentCodeLen) - 1),
+////                    currentCodeLen);
+//
+//                currentCodeLen++;
+//            }
 
             /* write out code for the string before c was added */
             *fpOut++ = code;
@@ -227,12 +235,12 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
 
     /* no more input.  write out last of the code. */
     *fpOut++ = code;
-    *fpOut = NULL;
+    *fpOut = -1;
     /* we've encoded everything, free bitfile structure */
     //BitFileToFILE(bfpOut);
 
     /* free the dictionary */
-    //FreeTree(dictRoot);
+    FreeTree(dictRoot);
 
     return 0;
 }
@@ -249,10 +257,10 @@ int LZWEncode(char* fpIn, uint32_t* fpOut)
 *   Returned   : Key built from string represented as a prefix + char.  Key
 *                format is {ms nibble of c} + prefix + {ls nibble of c}
 ***************************************************************************/
-static unsigned int MakeKey(const unsigned int prefixCode,
+static uint64_t MakeKey(const uint64_t prefixCode,
     const unsigned char suffixChar)
 {
-    unsigned int key;
+	uint64_t key;
 
     /* position ms nibble */
     key = suffixChar & 0xF0;
@@ -280,8 +288,8 @@ static unsigned int MakeKey(const unsigned int prefixCode,
 *   Returned   : Pointer to newly allocated node or NULL on error.
 *                errno will be set on an error.
 ***************************************************************************/
-static dict_node_t *MakeNode(const unsigned int codeWord,
-    const unsigned int prefixCode, const unsigned char suffixChar)
+static dict_node_t *MakeNode(const uint64_t codeWord,
+    const uint64_t prefixCode, const unsigned char suffixChar)
 {
     dict_node_t *node;
 
@@ -346,9 +354,9 @@ static void FreeTree(dict_node_t *node)
 *                is returned for an empty tree.
 ***************************************************************************/
 static dict_node_t *FindDictionaryEntry(dict_node_t *root,
-    const int unsigned prefixCode, const unsigned char c)
+    const uint64_t prefixCode, const unsigned char c)
 {
-    unsigned int searchKey, key;
+	uint64_t searchKey, key;
 
     if (NULL == root)
     {

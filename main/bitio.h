@@ -31,10 +31,10 @@
  *
  */
 
-short int input_bit( uint32_t *stream );
+short int input_bit( uint16_t *stream );
 void initialize_output_bitstream( void );
-void output_bit( uint32_t *stream, int bit );
-void flush_output_bitstream( uint32_t *stream );
+void output_bit( uint16_t *stream, int bit );
+void flush_output_bitstream( uint16_t *stream );
 void initialize_input_bitstream( void );
-long bit_ftell_output( uint32_t *stream );
-long bit_ftell_input( uint32_t *stream );
+long bit_ftell_output( uint16_t *stream );
+long bit_ftell_input( uint16_t *stream );

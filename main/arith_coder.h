@@ -69,15 +69,15 @@ typedef struct distribution{
 /*
  * Function prototypes.
  */
-void initialize_arithmetic_decoder( uint32_t *stream );
-void remove_symbol_from_stream( uint32_t *stream, SYMBOL *s );
+void initialize_arithmetic_decoder( uint16_t *stream );
+void remove_symbol_from_stream( uint16_t *stream, SYMBOL *s );
 void initialize_arithmetic_encoder( void );
-void encode_symbol( uint32_t *stream, SYMBOL *s );
-void flush_arithmetic_encoder( uint32_t *stream );
+void encode_symbol( uint16_t *stream, SYMBOL *s );
+void flush_arithmetic_encoder( uint16_t *stream );
 unsigned short int get_current_count( SYMBOL *s );
 
-void compress(char * input, uint32_t* compressed_file);
-void expand(uint32_t* compressed_file, char* input);
+void compress(char * input, uint16_t* compressed_file);
+void expand(uint16_t* compressed_file, char* input);
 void convert_int_to_symbol( char c, SYMBOL *s );
 char convert_symbol_to_int( unsigned int count, SYMBOL *s );
 void error_exit( char *message );

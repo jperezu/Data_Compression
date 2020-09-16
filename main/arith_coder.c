@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "bitio.h"
-#define DEBUG 0
+#include "lzw.h"
 
 /*
  * These four variables define the current state of the arithmetic
@@ -107,7 +107,7 @@ void initialize_arithmetic_encoder()
  * the output stream.  Finally, high and low are stable again and
  * the routine returns.
  */
-void encode_symbol( uint32_t *stream, SYMBOL *s )
+void encode_symbol( uint16_t *stream, SYMBOL *s )
 {
     long range;
 /*
@@ -160,7 +160,7 @@ void encode_symbol( uint32_t *stream, SYMBOL *s )
  * bits left in the high and low registers.  We output two bits,
  * plus as many underflow bits as are necessary.
  */
-void flush_arithmetic_encoder( uint32_t *stream )
+void flush_arithmetic_encoder( uint16_t *stream )
 {
     output_bit( stream, low & 0x4000 );
     underflow_bits++;
@@ -195,7 +195,7 @@ unsigned short int get_current_count( SYMBOL *s )
  * to their conventional starting values, plus reading the first
  * 16 bits from the input stream into the code value.
  */
-void initialize_arithmetic_decoder( uint32_t *stream )
+void initialize_arithmetic_decoder( uint16_t *stream )
 {
     int i;
 
@@ -215,7 +215,7 @@ void initialize_arithmetic_decoder( uint32_t *stream )
  * decoded, this routine has to be called to remove it from the
  * input stream.
  */
-void remove_symbol_from_stream( uint32_t *stream, SYMBOL *s )
+void remove_symbol_from_stream( uint16_t *stream, SYMBOL *s )
 {
     long range;
 
@@ -268,15 +268,12 @@ void remove_symbol_from_stream( uint32_t *stream, SYMBOL *s )
  * range.  Finally, the arithmetic coder module is called to
  * output the symbols to the bit stream.
  */
-void compress(char* input, uint32_t* compressed_file)
+void compress(char* input, uint16_t* compressed_file)
 {
     int i;
     char c;
     SYMBOL s;
 
-    if (DEBUG){
-    puts( "Compressing..." );
-    }
     initialize_output_bitstream();
     initialize_arithmetic_encoder();
     for ( i=0 ; ; )
@@ -301,16 +298,12 @@ void compress(char* input, uint32_t* compressed_file)
  * range.  Finally, it asks the modeling unit to convert the
  * high and low values to a symbol.
  */
-void expand(uint32_t* compressed_file, char* input)
+void expand(uint16_t* compressed_file, char* input)
 {
     SYMBOL s;
     char c;
     unsigned int count;
     unsigned int i = 0;
-
-    if (DEBUG){
-    puts( "Decoding..." );
-    }
 
     initialize_input_bitstream();
     initialize_arithmetic_decoder( compressed_file );
@@ -323,7 +316,7 @@ void expand(uint32_t* compressed_file, char* input)
             break;
         remove_symbol_from_stream( compressed_file, &s );
         if(c == input[i]){
-			//putc( c, stdout );
+			if(DEBUG) putc( c, stdout );
         }
 		else{
 			error_exit("-> DATA CORRUPTED");
@@ -332,7 +325,7 @@ void expand(uint32_t* compressed_file, char* input)
 		}
         i++;
     }
- 	putc( '\n', stdout );
+    if(DEBUG) putc( '\n', stdout );
 }
 
 /*

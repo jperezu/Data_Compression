@@ -85,7 +85,7 @@ void initialize_output_bitstream()
  * next character in the buffer.  If the next character is past the
  * end of the buffer, it is time to flush the buffer.
  */
-void output_bit( uint32_t *stream, int bit )
+void output_bit( uint16_t *stream, int bit )
 {
     if ( bit )
         *current_byte |= output_mask;
@@ -108,7 +108,7 @@ void output_bit( uint32_t *stream, int bit )
  * bytes sitting in the buffer waiting to be sent out.  This routine
  * is called to clean things up at that point.
  */
-void flush_output_bitstream( uint32_t *stream )
+void flush_output_bitstream( uint16_t *stream )
 {
 	uint8_t move_size = (current_byte - buffer < 3) ?
 			current_byte - buffer + 1 : 4;
@@ -137,7 +137,7 @@ void initialize_input_bitstream()
  * we have to keep feeding bits into the pipeline to be decoded so that
  * the old stuff that is 16 bits upstream can be pushed out.
  */
-short int input_bit( uint32_t *stream )
+short int input_bit( uint16_t *stream )
 {
     if ( input_bits_left == 0 )
     {
